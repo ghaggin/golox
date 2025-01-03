@@ -59,7 +59,7 @@ func runPrompt() error {
 }
 
 func run(s string) error {
-	tokens, err := scanTokens(s)
+	tokens, err := NewScanner(s).scanTokens()
 	if err != nil {
 		return fmt.Errorf("failed to scan tokens: %w", err)
 	}
