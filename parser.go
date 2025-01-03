@@ -1,14 +1,29 @@
 package main
 
+import "fmt"
+
 type Parser struct {
 	tokens  []Token
 	current int
 }
 
-func NewParser(tokens []Token) *Parser {
+func NewParser(tokens []Token) (*Parser, error) {
+	if len(tokens) == 0 {
+		return nil, fmt.Errorf("cannot parse empty list of tokens")
+	}
+
+	lastToken := tokens[len(tokens)-1]
+	if lastToken.Type != EOF {
+		tokens = append(tokens, Token{
+			Type:   EOF,
+			Lexeme: "",
+			Line:   lastToken.Line,
+		})
+	}
+
 	return &Parser{
 		tokens: tokens,
-	}
+	}, nil
 }
 
 func (p *Parser) Parse() Expr {

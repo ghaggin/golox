@@ -64,7 +64,11 @@ func run(s string) error {
 		return fmt.Errorf("failed to scan tokens: %w", err)
 	}
 
-	parser := NewParser(tokens)
+	parser, err := NewParser(tokens)
+	if err != nil {
+		return fmt.Errorf("failed to run: %w", err)
+	}
+
 	expr := parser.Parse()
 	if hadError {
 		return fmt.Errorf("failed to parse")
