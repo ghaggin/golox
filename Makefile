@@ -7,4 +7,4 @@ run:
 	@go run ${SRC}
 
 test:
-	go test *.go
+	go test -v *.go

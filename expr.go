@@ -4,7 +4,7 @@ import "fmt"
 
 type Expr interface {
 	Print() string
-	Evaluate() any
+	Evaluate() (any, error)
 }
 
 func Parenthesize(name string, exprs ...Expr) string {
@@ -45,8 +45,8 @@ type AssignExpr struct {
 	Value Expr
 }
 
-func (expr AssignExpr) Evaluate() any {
-	return nil
+func (expr AssignExpr) Evaluate() (any, error) {
+	return nil, nil
 }
 
 func (expr AssignExpr) Print() string {
@@ -60,45 +60,93 @@ type BinaryExpr struct {
 	Right Expr
 }
 
-func (expr BinaryExpr) Evaluate() any {
-	left := expr.Left.Evaluate()
-	right := expr.Right.Evaluate()
+func (expr BinaryExpr) Evaluate() (any, error) {
+	left, err := expr.Left.Evaluate()
+	if err != nil {
+		return nil, err
+	}
 
+	right, err := expr.Right.Evaluate()
+	if err != nil {
+		return nil, err
+	}
+
+	var leftFloat, rightFloat float64
+	var leftString, rightString string
+	var plusFloat bool
+
+	// Type Checking
 	switch expr.Op.Type {
-	case BANG_EQUAL:
-		return !isEqual(left, right)
-	case EQUAL_EQUAL:
-		return isEqual(left, right)
-	case GREATER:
-		return left.(float64) > right.(float64)
-	case GREATER_EQUAL:
-		return left.(float64) >= right.(float64)
-	case LESS:
-		return left.(float64) < right.(float64)
-	case LESS_EQUAL:
-		return left.(float64) <= right.(float64)
-	case MINUS:
-		return left.(float64) - right.(float64)
-	case SLASH:
-		return left.(float64) / right.(float64)
-	case STAR:
-		return left.(float64) * right.(float64)
-	case PLUS:
-		leftString, leftOK := left.(string)
-		rightString, rightOK := right.(string)
-		if leftOK && rightOK {
-			return leftString + rightString
+	case BANG_EQUAL, EQUAL_EQUAL, GREATER, GREATER_EQUAL, LESS, LESS_EQUAL, MINUS, SLASH, STAR:
+		// should be floats
+
+		if leftCast, ok := left.(float64); ok {
+			leftFloat = leftCast
+		} else {
+			return nil, fmt.Errorf("left operand of binary '%s' expression should be number: %v", expr.Op.Lexeme, left)
 		}
 
-		leftFloat, leftOK := left.(float64)
-		rightFloat, rightOK := right.(float64)
-		if leftOK && rightOK {
-			return leftFloat + rightFloat
+		if rightCast, ok := right.(float64); ok {
+			rightFloat = rightCast
+		} else {
+			return nil, fmt.Errorf("right operand of binary '%s' expression should be number: %v", expr.Op.Lexeme, left)
+		}
+	case PLUS:
+		// should be either be floats or strings
+
+		leftFloatCast, leftFloatOK := left.(float64)
+		rightFloatCast, rightFloatOK := right.(float64)
+
+		if leftFloatOK && rightFloatOK {
+			// use float for plus if left and right both casted to a float
+			plusFloat = true
+			leftFloat = leftFloatCast
+			rightFloat = rightFloatCast
+		}
+
+		leftStringCast, leftStringOK := left.(string)
+		rightStringCast, rightStringOK := right.(string)
+		if leftStringOK && rightStringOK {
+			plusFloat = false
+			leftString = leftStringCast
+			rightString = rightStringCast
+		}
+
+		// If left and right are not both floats and they are not both strings,
+		// return a type error
+		if !(leftFloatOK && rightFloatOK) && !(leftStringOK && rightStringOK) {
+			return nil, fmt.Errorf("left and right operant of '+' expression should both be numbers or both be strings: %v, %v", left, right)
 		}
 	}
 
+	switch expr.Op.Type {
+	case BANG_EQUAL:
+		return !isEqual(left, right), nil
+	case EQUAL_EQUAL:
+		return isEqual(left, right), nil
+	case GREATER:
+		return leftFloat > rightFloat, nil
+	case GREATER_EQUAL:
+		return leftFloat >= rightFloat, nil
+	case LESS:
+		return leftFloat < rightFloat, nil
+	case LESS_EQUAL:
+		return leftFloat <= rightFloat, nil
+	case MINUS:
+		return leftFloat - rightFloat, nil
+	case SLASH:
+		return leftFloat / rightFloat, nil
+	case STAR:
+		return leftFloat * rightFloat, nil
+	case PLUS:
+		if plusFloat {
+			return leftFloat + rightFloat, nil
+		}
+		return leftString + rightString, nil
+	}
+
 	// unreachable
-	return nil
+	return nil, nil
 }
 
 func (expr BinaryExpr) Print() string {
@@ -112,8 +160,8 @@ type CallExpr struct {
 	Args   []Expr
 }
 
-func (expr CallExpr) Evaluate() any {
-	return nil
+func (expr CallExpr) Evaluate() (any, error) {
+	return nil, nil
 }
 
 func (expr CallExpr) Print() string {
@@ -126,8 +174,8 @@ type GetExpr struct {
 	Name   Token
 }
 
-func (expr GetExpr) Evaluate() any {
-	return nil
+func (expr GetExpr) Evaluate() (any, error) {
+	return nil, nil
 }
 
 func (expr GetExpr) Print() string {
@@ -139,8 +187,8 @@ type GroupingExpr struct {
 	Expression Expr
 }
 
-func (expr GroupingExpr) Evaluate() any {
-	return nil
+func (expr GroupingExpr) Evaluate() (any, error) {
+	return nil, nil
 }
 
 func (expr GroupingExpr) Print() string {
@@ -152,8 +200,8 @@ type LiteralExpr struct {
 	Value any
 }
 
-func (expr LiteralExpr) Evaluate() any {
-	return expr.Value
+func (expr LiteralExpr) Evaluate() (any, error) {
+	return expr.Value, nil
 }
 
 func (expr LiteralExpr) Print() string {
@@ -170,8 +218,8 @@ type LogicalExpr struct {
 	Op    Token
 }
 
-func (expr LogicalExpr) Evaluate() any {
-	return nil
+func (expr LogicalExpr) Evaluate() (any, error) {
+	return nil, nil
 }
 
 func (expr LogicalExpr) Print() string {
@@ -185,8 +233,8 @@ type SetExpr struct {
 	Value  Expr
 }
 
-func (expr SetExpr) Evaluate() any {
-	return nil
+func (expr SetExpr) Evaluate() (any, error) {
+	return nil, nil
 }
 
 func (expr SetExpr) Print() string {
@@ -199,8 +247,8 @@ type SuperExpr struct {
 	Method  Token
 }
 
-func (expr SuperExpr) Evaluate() any {
-	return nil
+func (expr SuperExpr) Evaluate() (any, error) {
+	return nil, nil
 }
 
 func (expr SuperExpr) Print() string {
@@ -212,8 +260,8 @@ type ThisExpr struct {
 	Keyword Token
 }
 
-func (expr ThisExpr) Evaluate() any {
-	return nil
+func (expr ThisExpr) Evaluate() (any, error) {
+	return nil, nil
 }
 
 func (expr ThisExpr) Print() string {
@@ -226,19 +274,26 @@ type UnaryExpr struct {
 	Right Expr
 }
 
-func (expr UnaryExpr) Evaluate() any {
-	right := expr.Right.Evaluate()
+func (expr UnaryExpr) Evaluate() (any, error) {
+	right, err := expr.Right.Evaluate()
+	if err != nil {
+		return nil, err
+	}
 
 	switch expr.Op.Type {
 	case MINUS:
 		// TODO: what if right is not a float64?
-		return -(right.(float64))
+		rightFloat, ok := right.(float64)
+		if !ok {
+			return nil, fmt.Errorf("operand for unary '-' expression should be a number: %v", right)
+		}
+		return -rightFloat, nil
 	case BANG:
-		return !isTruthy(right)
+		return !isTruthy(right), nil
 	}
 
 	// unreachable
-	return nil
+	return nil, nil
 }
 
 func (expr UnaryExpr) Print() string {
@@ -250,8 +305,8 @@ type VariableExpr struct {
 	Name Token
 }
 
-func (expr VariableExpr) Evaluate() any {
-	return nil
+func (expr VariableExpr) Evaluate() (any, error) {
+	return nil, nil
 }
 
 func (expr VariableExpr) Print() string {

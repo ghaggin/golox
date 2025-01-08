@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPrettyPrint(t *testing.T) {
@@ -265,7 +266,7 @@ func TestBinaryExpression(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, BinaryExpr{
+			v, err := BinaryExpr{
 				Op: Token{
 					Type: tt.op,
 				},
@@ -275,7 +276,9 @@ func TestBinaryExpression(t *testing.T) {
 				Right: LiteralExpr{
 					Value: tt.r,
 				},
-			}.Evaluate())
+			}.Evaluate()
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, v)
 		})
 	}
 }
@@ -309,14 +312,189 @@ func TestUnaryEvaluate(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expected, UnaryExpr{
+			v, err := UnaryExpr{
 				Op: Token{
 					Type: tt.op,
 				},
 				Right: LiteralExpr{
 					Value: tt.r,
 				},
-			}.Evaluate())
+			}.Evaluate()
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, v)
+		})
+	}
+}
+
+func TestBinaryTypeErrorsNonPlus(t *testing.T) {
+	testCases := []struct {
+		name        string
+		left        any
+		right       any
+		expectError bool
+	}{
+		{
+			name:        "two_floats",
+			left:        3.,
+			right:       5.,
+			expectError: false,
+		},
+		{
+			name:        "two_strings",
+			left:        "s1",
+			right:       "s2",
+			expectError: true,
+		},
+		{
+			name:        "left_string",
+			left:        "s1",
+			right:       3.,
+			expectError: true,
+		},
+		{
+			name:        "right_string",
+			left:        3.,
+			right:       "s2",
+			expectError: true,
+		},
+	}
+
+	ops := []TokenType{
+		BANG_EQUAL, EQUAL_EQUAL, GREATER, GREATER_EQUAL, LESS, LESS_EQUAL, MINUS, SLASH, STAR,
+	}
+
+	for _, op := range ops {
+		for _, tt := range testCases {
+			t.Run(tt.name+"_"+string(op), func(t *testing.T) {
+				_, err := BinaryExpr{
+					Op: Token{
+						Type: op,
+					},
+					Left: LiteralExpr{
+						Value: tt.left,
+					},
+					Right: LiteralExpr{
+						Value: tt.right,
+					},
+				}.Evaluate()
+				if tt.expectError {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		}
+	}
+}
+
+func TestBinaryTypeErrorsPlus(t *testing.T) {
+	testCases := []struct {
+		name        string
+		left        any
+		right       any
+		expectError bool
+	}{
+		{
+			name:        "both_float",
+			left:        3.,
+			right:       3.,
+			expectError: false,
+		},
+		{
+			name:        "both_string",
+			left:        "s1",
+			right:       "s2",
+			expectError: false,
+		},
+		{
+			name:        "left_float_right_string",
+			left:        3.,
+			right:       "s2",
+			expectError: true,
+		},
+		{
+			name:        "right_float_left_string",
+			left:        "s1",
+			right:       3.,
+			expectError: true,
+		},
+		{
+			name:        "left_bool",
+			left:        false,
+			right:       3.,
+			expectError: true,
+		},
+		{
+			name:        "right_bool",
+			left:        3.,
+			right:       true,
+			expectError: true,
+		},
+		{
+			name:        "both_bool",
+			left:        false,
+			right:       true,
+			expectError: true,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := BinaryExpr{
+				Op: Token{
+					Type: PLUS,
+				},
+				Left: LiteralExpr{
+					Value: tt.left,
+				},
+				Right: LiteralExpr{
+					Value: tt.right,
+				},
+			}.Evaluate()
+
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestUnaryTypeError(t *testing.T) {
+	testCases := []struct {
+		name        string
+		operand     any
+		expectError bool
+	}{
+		{
+			name:        "float_operand",
+			operand:     3.,
+			expectError: false,
+		},
+		{
+			name:        "string_operand",
+			operand:     "s1",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := UnaryExpr{
+				Op: Token{
+					Type: MINUS,
+				},
+				Right: LiteralExpr{
+					Value: tt.operand,
+				},
+			}.Evaluate()
+
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
