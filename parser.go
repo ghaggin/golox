@@ -26,12 +26,17 @@ func NewParser(tokens []Token) (*Parser, error) {
 	}, nil
 }
 
-func (p *Parser) Parse() Expr {
-	expr, err := p.expression()
-	if err != nil {
-		return nil
+func (p *Parser) Parse() ([]Stmt, error) {
+	stmts := []Stmt{}
+	for !p.isAtEnd() {
+		stmt, err := p.statement()
+		if err != nil {
+			// synchronize??
+			return nil, err
+		}
+		stmts = append(stmts, stmt)
 	}
-	return expr
+	return stmts, nil
 }
 
 func (p *Parser) match(tokenTypes ...TokenType) bool {
@@ -82,6 +87,38 @@ func (p *Parser) consume(tokenType TokenType, message string) (Token, error) {
 func (p *Parser) error(token Token, message string) error {
 	TokenError(token, message)
 	return ParseError{}
+}
+
+func (p *Parser) statement() (Stmt, error) {
+	if p.match(PRINT) {
+		return p.printStatement()
+	}
+
+	return p.expressionStatement()
+}
+
+func (p *Parser) printStatement() (Stmt, error) {
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	p.consume(SEMICOLON, "Expect ';' after value.")
+	return PrintStmt{
+		Expr: expr,
+	}, nil
+}
+
+func (p *Parser) expressionStatement() (Stmt, error) {
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	p.consume(SEMICOLON, "Expect ';' after expression.")
+	return ExprStmt{
+		Expr: expr,
+	}, nil
 }
 
 func (p *Parser) expression() (Expr, error) {

@@ -188,7 +188,7 @@ type GroupingExpr struct {
 }
 
 func (expr GroupingExpr) Evaluate() (any, error) {
-	return nil, nil
+	return expr.Expression.Evaluate()
 }
 
 func (expr GroupingExpr) Print() string {

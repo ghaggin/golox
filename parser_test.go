@@ -7,6 +7,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func assertExpressionStatementTest(t *testing.T, tokens []Token, expected Expr) {
+	p, err := NewParser(append(tokens, Token{Type: SEMICOLON, Lexeme: ";"}))
+	require.NoError(t, err)
+	stmts, err := p.Parse()
+	require.NoError(t, err)
+	require.Len(t, stmts, 1)
+	expr, ok := stmts[0].(ExprStmt)
+	require.True(t, ok)
+	assert.Equal(t, expected, expr.Expr)
+}
+
 func TestPrimaryNoGroupings(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -101,9 +112,7 @@ func TestPrimaryNoGroupings(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := NewParser(tt.tokens)
-			require.NoError(t, err)
-			assert.Equal(t, tt.expected, p.Parse())
+			assertExpressionStatementTest(t, tt.tokens, tt.expected)
 		})
 	}
 }
@@ -163,9 +172,7 @@ func TestUnary(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := NewParser(tt.tokens)
-			require.NoError(t, err)
-			assert.Equal(t, tt.expected, p.Parse())
+			assertExpressionStatementTest(t, tt.tokens, tt.expected)
 		})
 	}
 }
@@ -291,9 +298,7 @@ func TestFactor(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := NewParser(tt.tokens)
-			require.NoError(t, err)
-			assert.Equal(t, tt.expected, p.Parse())
+			assertExpressionStatementTest(t, tt.tokens, tt.expected)
 		})
 	}
 }
@@ -419,9 +424,7 @@ func TestTerm(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := NewParser(tt.tokens)
-			require.NoError(t, err)
-			assert.Equal(t, tt.expected, p.Parse())
+			assertExpressionStatementTest(t, tt.tokens, tt.expected)
 		})
 	}
 }
@@ -560,9 +563,7 @@ func TestComparison(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := NewParser(tt.tokens)
-			require.NoError(t, err)
-			assert.Equal(t, tt.expected, p.Parse())
+			assertExpressionStatementTest(t, tt.tokens, tt.expected)
 		})
 	}
 }
@@ -639,9 +640,7 @@ func TestEquality(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			p, err := NewParser(tt.tokens)
-			require.NoError(t, err)
-			assert.Equal(t, tt.expected, p.Parse())
+			assertExpressionStatementTest(t, tt.tokens, tt.expected)
 		})
 	}
 }

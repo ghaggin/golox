@@ -69,11 +69,24 @@ func run(s string) error {
 		return fmt.Errorf("failed to run: %w", err)
 	}
 
-	expr := parser.Parse()
-	if hadError {
+	stmts, err := parser.Parse()
+	if err != nil || hadError {
+		if err != nil {
+			fmt.Println(err)
+		}
 		return fmt.Errorf("failed to parse")
 	}
 
-	fmt.Println(expr.Print())
+	interpret(stmts)
+
 	return nil
+}
+
+func interpret(stmts []Stmt) {
+	for _, stmt := range stmts {
+		err := stmt.Execute()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 }
