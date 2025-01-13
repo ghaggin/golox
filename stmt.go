@@ -27,3 +27,21 @@ func (stmt PrintStmt) Execute() error {
 	fmt.Println(v)
 	return nil
 }
+
+type VarStmt struct {
+	Name Token
+	Expr Expr
+}
+
+func (stmt VarStmt) Execute() error {
+	var v any
+	if stmt.Expr != nil {
+		vv, err := stmt.Expr.Evaluate()
+		if err != nil {
+			return err
+		}
+		v = vv
+	}
+	environment.Define(stmt.Name.Lexeme, v)
+	return nil
+}

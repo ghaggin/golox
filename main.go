@@ -7,6 +7,10 @@ import (
 	"os"
 )
 
+var (
+	environment = Environment{}
+)
+
 func main() {
 	if len(os.Args) > 2 {
 		fmt.Println("Usage: golox [script]")

@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Parser struct {
 	tokens  []Token
@@ -29,11 +31,12 @@ func NewParser(tokens []Token) (*Parser, error) {
 func (p *Parser) Parse() ([]Stmt, error) {
 	stmts := []Stmt{}
 	for !p.isAtEnd() {
-		stmt, err := p.statement()
+		stmt, err := p.declaration()
 		if err != nil {
-			// synchronize??
-			return nil, err
+			p.Synchronize()
+			continue
 		}
+
 		stmts = append(stmts, stmt)
 	}
 	return stmts, nil
@@ -89,6 +92,35 @@ func (p *Parser) error(token Token, message string) error {
 	return ParseError{}
 }
 
+func (p *Parser) declaration() (Stmt, error) {
+	if p.match(VAR) {
+		return p.varDeclaration()
+	} else {
+		return p.statement()
+	}
+}
+
+func (p *Parser) varDeclaration() (Stmt, error) {
+	name, err := p.consume(IDENTIFIER, "Expect variable name")
+	if err != nil {
+		return nil, err
+	}
+
+	var initializer Expr
+	if p.match(EQUAL) {
+		initializer, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	p.consume(SEMICOLON, "Expect ';' after variable declaration.")
+	return VarStmt{
+		Name: name,
+		Expr: initializer,
+	}, nil
+}
+
 func (p *Parser) statement() (Stmt, error) {
 	if p.match(PRINT) {
 		return p.printStatement()
@@ -122,7 +154,33 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 }
 
 func (p *Parser) expression() (Expr, error) {
-	return p.equality()
+	return p.assignment()
+}
+
+func (p *Parser) assignment() (Expr, error) {
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(EQUAL) {
+		equals := p.previous()
+		value, err := p.assignment()
+		if err != nil {
+			return nil, err
+		}
+
+		if varExpr, ok := expr.(VariableExpr); ok {
+			return AssignExpr{
+				Name:  varExpr.Name,
+				Value: value,
+			}, nil
+		}
+
+		Error(equals.Line, "Invalid assignment target.")
+	}
+
+	return expr, nil
 }
 
 func (p *Parser) equality() (Expr, error) {
@@ -255,6 +313,12 @@ func (p *Parser) primary() (Expr, error) {
 		return GroupingExpr{
 			Expression: expr,
 		}, err
+	}
+
+	if p.match(IDENTIFIER) {
+		return VariableExpr{
+			Name: p.previous(),
+		}, nil
 	}
 
 	return nil, p.error(p.peek(), "Expect expression.")

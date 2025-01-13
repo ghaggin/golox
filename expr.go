@@ -46,7 +46,12 @@ type AssignExpr struct {
 }
 
 func (expr AssignExpr) Evaluate() (any, error) {
-	return nil, nil
+	v, err := expr.Value.Evaluate()
+	if err != nil {
+		return nil, err
+	}
+
+	return v, environment.Assign(expr.Name, v)
 }
 
 func (expr AssignExpr) Print() string {
@@ -306,7 +311,7 @@ type VariableExpr struct {
 }
 
 func (expr VariableExpr) Evaluate() (any, error) {
-	return nil, nil
+	return environment.Get(expr.Name)
 }
 
 func (expr VariableExpr) Print() string {
