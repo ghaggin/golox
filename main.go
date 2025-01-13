@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	environment = Environment{}
+	environment = NewEnvironment(nil)
 )
 
 func main() {
@@ -16,7 +16,7 @@ func main() {
 		fmt.Println("Usage: golox [script]")
 		return
 	} else if len(os.Args) == 2 {
-		if err := runFile(os.Args[0]); err != nil {
+		if err := runFile(os.Args[1]); err != nil {
 			fmt.Println(err)
 			return
 		}

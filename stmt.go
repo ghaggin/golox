@@ -45,3 +45,26 @@ func (stmt VarStmt) Execute() error {
 	environment.Define(stmt.Name.Lexeme, v)
 	return nil
 }
+
+type BlockStmt struct {
+	Stmts []Stmt
+}
+
+func (stmt BlockStmt) Execute() error {
+	return executeBlock(stmt.Stmts, NewEnvironment(environment))
+}
+
+func executeBlock(stmts []Stmt, env *Environment) error {
+	prev := environment
+	environment = env
+	defer func() {
+		environment = prev
+	}()
+	for _, stmt := range stmts {
+		err := stmt.Execute()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

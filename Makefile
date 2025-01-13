@@ -8,3 +8,6 @@ run:
 
 test:
 	go test -v *.go
+
+file:
+	@go run ${SRC} test.lox
